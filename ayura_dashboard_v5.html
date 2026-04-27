@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AYÜRA DASHBOARD</title>
-<meta name="ayura-build" content="a8fc68ce">
+<meta name="ayura-build" content="b2e91f44">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1071,7 +1071,19 @@ function tryUnlock(){
     document.getElementById('lockScreen').classList.add('fade-out');
     setTimeout(()=>{document.getElementById('lockScreen').style.display='none';document.getElementById('app').classList.add('visible');},500);
   } else {
-    document.getElementById('lockErr').textContent='Incorrect password';
+  const funny=[
+  '❌ nope, try again bestie',
+  '🙅‍♀️ who are you??',
+  '💀 absolutely not',
+  '🚫 wrong! are you even hiba?',
+  '😭 girl that is NOT it',
+  '🔐 nice try though',
+  '👀 hmm suspicious...',
+  '💅 not today',
+  '🤨 really? REALLY?',
+  '😤 get out'
+];
+document.getElementById('lockErr').textContent=funny[Math.floor(Math.random()*funny.length)];
     card.classList.remove('shake');
     void card.offsetWidth;
     card.classList.add('shake');
