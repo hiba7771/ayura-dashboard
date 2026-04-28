@@ -4,9 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AYÜRA DASHBOARD</title>
-<meta name="ayura-build" content="d9e83b12">
+<meta name="ayura-build" content="e1a45c77">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -272,7 +271,7 @@ tbody td{padding:10px 11px;font-size:12px;vertical-align:middle;}
     <div><div class="htitle">AYÜRA DASHBOARD</div><div class="hsub">Operations · Morocco</div></div>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
-    <div class="ver-badge" title="Build hash: d9e83b12">v · 28/04 01:45</div>
+    <div class="ver-badge" title="Build hash: e1a45c77">v · 28/04 02:10</div>
     <div class="date-badge" id="liveClock">27/04/2026</div>
     <button class="add-btn" onclick="openOrderModal()">＋ New Order</button>
   </div>
@@ -288,7 +287,6 @@ tbody td{padding:10px 11px;font-size:12px;vertical-align:middle;}
   <div class="tab" onclick="switchTab('wallet')" id="tab-wallet">💳 Wallet</div>
   <div class="tab" onclick="switchTab('capital')" id="tab-capital">📊 Capital</div>
   <div class="tab" onclick="switchTab('products')" id="tab-products">🗂️ Products</div>
-  <div class="tab" onclick="switchTab('amex')" id="tab-amex">🚚 Amex</div>
 </div>
 
 <!-- ===== ORDERS ===== -->
@@ -299,13 +297,6 @@ tbody td{padding:10px 11px;font-size:12px;vertical-align:middle;}
     <div class="kpi-card c-ship"><div class="kpi-name">Shipping</div><div class="kpi-val neutral" id="kpiShip">0 DH</div></div>
     <div class="kpi-card c-pack"><div class="kpi-name">Packaging</div><div class="kpi-val neutral" id="kpiPack">0 DH</div></div>
     <div class="kpi-card c-profit"><div class="kpi-name">Net Profit</div><div class="kpi-val neutral" id="kpiProfit">0 DH</div></div>
-  </div>
-  <!-- SOURCE FILTER -->
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
-    <span style="font-size:11px;font-weight:700;color:var(--muted)">SHOW:</span>
-    <button class="df-pill active" id="sf-all" onclick="setOrderFilter('all')">All Orders</button>
-    <button class="df-pill" id="sf-manual" onclick="setOrderFilter('manual')">✋ Manual</button>
-    <button class="df-pill" id="sf-amex" onclick="setOrderFilter('amex')">🚚 Amex</button>
   </div>
   <div class="table-wrap">
     <div class="t-header"><div class="t-title">Order Tracker</div><div class="badge" id="orderBadge">0 orders</div></div>
@@ -404,94 +395,6 @@ tbody td{padding:10px 11px;font-size:12px;vertical-align:middle;}
     </div>
   </div>
 </div>
-<!-- ===== AMEX VIEW ===== -->
-<div class="view" id="view-amex">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-    <div>
-      <div style="font-size:18px;font-weight:800;color:var(--text)">🚚 Amex Import</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:3px">Export from Amex → upload here → see your stats instantly</div>
-    </div>
-    <label style="background:linear-gradient(135deg,var(--teal),#00a88e);color:var(--navy);padding:9px 20px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 4px 14px rgba(0,201,167,.3);">
-      📂 Upload Amex Excel File
-      <input type="file" id="amexFileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="loadAmexFile(event)"/>
-    </label>
-  </div>
-
-  <!-- KPI CARDS -->
-  <div class="kpi-bar" style="grid-template-columns:repeat(6,1fr)" id="amexKpis">
-    <div class="kpi-card"><div class="kpi-name">Total Orders</div><div class="kpi-val neutral" id="axTotal">—</div></div>
-    <div class="kpi-card c-profit"><div class="kpi-name">💰 Revenue</div><div class="kpi-val neutral" id="axRevenue">—</div></div>
-    <div class="kpi-card" style="--c:var(--green)"><div class="kpi-name">✅ Delivered</div><div class="kpi-val pos" id="axDelivered">—</div></div>
-    <div class="kpi-card c-red"><div class="kpi-name">🔄 Returned</div><div class="kpi-val neg" id="axReturned">—</div></div>
-    <div class="kpi-card c-cost"><div class="kpi-name">❌ Cancelled</div><div class="kpi-val neutral" id="axCancelled">—</div></div>
-    <div class="kpi-card c-ship"><div class="kpi-name">⏳ Pending</div><div class="kpi-val neutral" id="axPending">—</div></div>
-  </div>
-
-  <!-- RATE CARDS -->
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px;margin-bottom:24px">
-    <div class="kpi-card" style="text-align:center">
-      <div class="kpi-name">📦 Delivery Rate</div>
-      <div class="kpi-val pos" id="axDeliveryRate">—</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">Delivered / Total</div>
-    </div>
-    <div class="kpi-card" style="text-align:center">
-      <div class="kpi-name">🔄 Return Rate</div>
-      <div class="kpi-val neg" id="axReturnRate">—</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">Returned / Total</div>
-    </div>
-    <div class="kpi-card" style="text-align:center">
-      <div class="kpi-name">💵 Avg Order Value</div>
-      <div class="kpi-val neutral" id="axAvgOrder">—</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px">Revenue / Delivered</div>
-    </div>
-  </div>
-
-  <!-- CHARTS -->
-  <div class="money-grid">
-    <div class="chart-card">
-      <div class="chart-title">Orders by Status</div>
-      <div class="chart-sub">Livré · Retourné · Annulé · En attente</div>
-      <canvas id="axStatusChart" height="220"></canvas>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">Top 10 Cities</div>
-      <div class="chart-sub">By number of orders</div>
-      <div id="axCityList" class="city-list"></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">Revenue by City</div>
-      <div class="chart-sub">Top 8 cities by revenue</div>
-      <canvas id="axRevenueChart" height="220"></canvas>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">Daily Orders</div>
-      <div class="chart-sub">Order volume over time</div>
-      <canvas id="axDailyChart" height="220"></canvas>
-    </div>
-  </div>
-
-  <!-- ORDERS TABLE -->
-  <div class="table-wrap" style="margin-top:20px">
-    <div class="t-header">
-      <div class="t-title">All Amex Orders</div>
-      <div class="badge" id="axTableBadge">Upload a file to see orders</div>
-    </div>
-    <div style="overflow-x:auto">
-      <table>
-        <thead><tr>
-          <th>#</th><th>Tracking</th><th>Customer</th><th>Phone</th>
-          <th>City</th><th>Status</th><th>Payment</th><th>Price</th><th>Date</th>
-        </tr></thead>
-        <tbody id="axTableBody"></tbody>
-      </table>
-      <div class="empty" id="axEmpty">
-        <div class="empty-icon">🚚</div>
-        <p>Upload your Amex Excel export to see all orders here.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
 </div><!-- end #app -->
 
 <!-- ===== ORDER MODAL ===== -->
@@ -1185,8 +1088,6 @@ if(sessionStorage.getItem('ayura_auth')==='1'){
 let orders=JSON.parse(localStorage.getItem('ayura_orders')||'[]');
 let products=JSON.parse(localStorage.getItem('ayura_products')||'[]');
 let capital=JSON.parse(localStorage.getItem('ayura_capital')||'[]');
-let axData=JSON.parse(localStorage.getItem('ayura_amex')||'[]');
-let orderFilter='all'; // all | manual | amex
 let editProdIdx=null;
 let selCityFee=null;
 let cityDDIdx=-1;
@@ -1205,9 +1106,6 @@ function save(){
   localStorage.setItem('ayura_orders',JSON.stringify(orders));
   localStorage.setItem('ayura_products',JSON.stringify(products));
   localStorage.setItem('ayura_capital',JSON.stringify(capital));
-}
-function saveAmex(){
-  localStorage.setItem('ayura_amex',JSON.stringify(axData));
 }
 
 // ===== CLOCK =====
@@ -1245,7 +1143,7 @@ function inRange(dateStr,from,to){
 
 // ===== TABS =====
 function switchTab(t){
-  ['orders','wallet','capital','products','amex'].forEach(x=>{
+  ['orders','wallet','capital','products'].forEach(x=>{
     document.getElementById('view-'+x).classList.toggle('active',x===t);
     document.getElementById('tab-'+x).classList.toggle('active',x===t);
   });
@@ -1505,126 +1403,53 @@ function saveOrder(){
 function deleteOrder(id){if(!confirm('Delete?'))return;orders=orders.filter(o=>o.id!==id);save();renderOrders();renderKPIs();}
 
 // ===== RENDER ORDERS =====
-// ===== ORDER FILTER =====
-function setOrderFilter(f){
-  orderFilter=f;
-  ['all','manual','amex'].forEach(x=>{
-    document.getElementById('sf-'+x).classList.toggle('active',x===f);
-  });
-  renderOrders();renderKPIs();
-}
-
-// Convert amex row to unified order object
-function amexToOrder(r){
-  const ship=CITY_FEES[r.city]||45;
-  const profit=r.price-ship;
-  const dateStr=String(r.date).split(' ')[0]; // YYYY-MM-DD
-  let datetime=r.date?dateStr+' 00:00':nowStamp();
-  // convert YYYY-MM-DD to DD/MM/YYYY HH:MM
-  if(dateStr&&dateStr.includes('-')){
-    const[y,m,d]=dateStr.split('-');
-    const time=String(r.date).includes(' ')?String(r.date).split(' ')[1].slice(0,5):'00:00';
-    datetime=`${d}/${m}/${y} ${time}`;
-  }
-  const statusMap={
-    'Livré':'delivered',
-    'Retourné':'returned',
-    'Annulé':'returned',
-    'Attente':'confirmed'
-  };
-  const sKey=Object.keys(statusMap).find(k=>r.statut.startsWith(k))||'confirmed';
-  return {
-    id:'ax_'+r.tracking,
-    source:'amex',
-    datetime,
-    customer:r.customer,
-    productName:r.products||'Bijoux AYÜRA',
-    productBase:0,productQty:1,adsCost:0,
-    packagingItems:[],packagingCost:0,
-    city:r.city,shipping:ship,
-    salePrice:r.price,productCost:0,profit,
-    status:statusMap[sKey]||'confirmed',
-    retourPenalty:0,
-    tracking:r.tracking,phone:r.phone,etat:r.etat,statut:r.statut
-  };
-}
-
-function getAllOrders(){
-  const manual=orders.map(o=>({...o,source:o.source||'manual'}));
-  const amex=axData.map(r=>amexToOrder(r));
-  if(orderFilter==='manual') return manual;
-  if(orderFilter==='amex') return amex;
-  return [...manual,...amex].sort((a,b)=>parseDMY(b.datetime.split(' ')[0])-parseDMY(a.datetime.split(' ')[0]));
-}
-
 function renderOrders(){
   const tbody=document.getElementById('ordersBody');
   const empty=document.getElementById('ordersEmpty');
-  const all=getAllOrders();
-  document.getElementById('orderBadge').textContent=all.length+' order'+(all.length!==1?'s':'');
-  if(!all.length){tbody.innerHTML='';empty.style.display='block';return;}
+  document.getElementById('orderBadge').textContent=orders.length+' order'+(orders.length!==1?'s':'');
+  if(!orders.length){tbody.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
-  tbody.innerHTML=all.map((o,i)=>{
+  tbody.innerHTML=orders.map((o,i)=>{
     const pc=o.profit>0?'pp':o.profit<0?'pn':'pz';
-    const fee=CITY_FEES[o.city]||o.shipping||45;
-    const isAmex=o.source==='amex';
-    const sourceBadge=isAmex?'<span style="background:#ede9fe;color:#7c3aed;padding:1px 5px;border-radius:4px;font-size:9px;font-weight:700;margin-left:3px">🚚 Amex</span>':'';
+    const fee=CITY_FEES[o.city]||o.shipping;
     const items=o.packagingItems||[];
     const packHtml=items.length?items.map(r=>`<span class="pack-tag">${r.type}${r.qty>1?' ×'+r.qty:''}</span>`).join(''):'—';
     const qtyLabel=o.productQty>1?` ×${o.productQty}`:'';
     const retourTag=o.retourPenalty?`<span class="retour-tag">-${o.retourPenalty} DH</span>`:'';
-    const deleteBtn=isAmex?'':`<button class="act-btn del" onclick="deleteOrder(${o.id})">🗑</button>`;
     return `<tr>
       <td style="font-weight:700;color:var(--muted)">${i+1}</td>
       <td style="font-size:11px;color:var(--muted);white-space:nowrap">${o.datetime}</td>
-      <td style="font-weight:600">${o.customer}${sourceBadge}</td>
-      <td><span style="font-weight:700">${o.productName}${qtyLabel}</span>${o.adsCost?`<br><span style="font-size:10px;color:var(--muted)">+Ads ${o.adsCost} DH</span>`:''}</td>
+      <td style="font-weight:600">${o.customer}</td>
+      <td><span style="font-weight:700">${o.productName}${qtyLabel}</span><br><span style="font-size:10px;color:var(--muted)">${o.productBase} DH${o.adsCost?` +Ads ${o.adsCost}`:''}</span></td>
       <td>${packHtml}<div style="font-size:10px;color:var(--purple);font-weight:700;margin-top:2px">${dh(o.packagingCost||0)}</div></td>
       <td><span style="font-size:12px;font-weight:600">${o.city}</span><br><span class="fee-badge ${feeCls(fee)}" style="font-size:9px">${fee} DH</span></td>
-      <td>${isAmex?renderAmexStatusCell(o):renderStatusCell(o)}</td>
+      <td>${renderStatusCell(o)}</td>
       <td style="font-weight:700">${dh(o.salePrice)}</td>
       <td style="color:var(--amber);font-weight:700">${dh(o.productCost||0)}</td>
       <td style="color:var(--blue);font-weight:700">${dh(o.shipping)}</td>
       <td class="${pc}">${dh(o.profit)}${retourTag}</td>
-      <td>${deleteBtn}</td>
+      <td><button class="act-btn del" onclick="deleteOrder(${o.id})">🗑</button></td>
     </tr>`;
   }).join('');
 }
 
-function renderAmexStatusCell(o){
-  const SC={confirmed:'st-confirmed',transit:'st-transit',delivered:'st-delivered',returned:'st-returned'};
-  const SW={confirmed:'25%',transit:'50%',delivered:'100%',returned:'100%'};
-  const SCol={confirmed:'#3b82f6',transit:'#f59e0b',delivered:'#10b981',returned:'#ef4444'};
-  const SL={confirmed:'🔵 Confirmed',transit:'🟡 In Transit',delivered:'🟢 Delivered',returned:'🔴 Returned'};
-  return `<div class="status-cell">
-    <div class="status-badge-wrap">
-      <div class="status-badge ${SC[o.status]||'st-confirmed'}">${SL[o.status]||'🔵 Confirmed'}</div>
-    </div>
-    <div class="pb-outer"><div class="pb-inner" style="width:${SW[o.status]||'25%'};background:${SCol[o.status]||'#3b82f6'}"></div></div>
-  </div>`;
-}
-
-// ===== KPIs (combined manual + amex based on filter) =====
+// ===== KPIs =====
 function renderKPIs(){
-  const all=getAllOrders();
-  const rev=all.reduce((a,o)=>a+o.salePrice,0);
-  const cost=all.reduce((a,o)=>a+(o.productCost||0),0);
-  const ship=all.reduce((a,o)=>a+o.shipping,0);
-  const pack=all.reduce((a,o)=>a+(o.packagingCost||0),0);
-  const profit=all.reduce((a,o)=>a+o.profit,0);
+  const rev=orders.reduce((a,o)=>a+o.salePrice,0);
+  const cost=orders.reduce((a,o)=>a+(o.productCost||0),0);
+  const ship=orders.reduce((a,o)=>a+o.shipping,0);
+  const pack=orders.reduce((a,o)=>a+(o.packagingCost||0),0);
+  const profit=orders.reduce((a,o)=>a+o.profit,0);
   const set=(id,val,cls)=>{const el=document.getElementById(id);if(el){el.textContent=val;el.className='kpi-val '+(cls||'neutral');}};
   set('kpiRev',dh(rev));set('kpiCost',dh(cost));set('kpiShip',dh(ship));set('kpiPack',dh(pack));
   set('kpiProfit',dh(profit),profit>0?'pos':profit<0?'neg':'neutral');
 }
 
-// ===== WALLET (filtered, combined manual + amex) =====
+// ===== WALLET =====
 let cStatus=null,cProduct=null,cDaily=null;
 function renderWallet(){
   const range=getDateRange(walletFilter,walletCustomFrom,walletCustomTo);
-  const manual=orders.map(o=>({...o,source:'manual'}));
-  const amex=axData.map(r=>amexToOrder(r));
-  const combined=[...manual,...amex];
-  const data=combined.filter(o=>inRange(o.datetime,range.from,range.to));
+  const data=orders.filter(o=>inRange(o.datetime,range.from,range.to));
   const rev=data.reduce((a,o)=>a+o.salePrice,0);
   const cost=data.reduce((a,o)=>a+(o.productCost||0),0);
   const ship=data.reduce((a,o)=>a+o.shipping,0);
@@ -1856,143 +1681,10 @@ if(!products.length){
   ];save();
 }
 renderOrders();renderProds();renderKPIs();
-if(axData.length) renderAmex();
 
-// ===== AMEX IMPORT =====
-let axStatusChart = null, axRevenueChart = null, axDailyChart = null;
-
-function loadAmexFile(event){
-  const file = event.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e){
-    try {
-      // Parse xlsx using SheetJS — load from CDN
-      if(typeof XLSX === 'undefined'){
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
-        s.onload = () => parseAmexXLSX(e.target.result);
-        document.head.appendChild(s);
-      } else {
-        parseAmexXLSX(e.target.result);
-      }
-    } catch(err){ alert('Error reading file: '+err.message); }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function parseAmexXLSX(buffer){
-  const wb = XLSX.read(buffer, {type:'array'});
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
-  axData = rows.map(r => ({
-    tracking: r['Code Suivi']||'',
-    order: r['№ Commande']||'',
-    customer: r['Destinataire']||'',
-    phone: r['Téléphone']||'',
-    city: r['Ville']||'',
-    statut: r['Statut']||'',
-    etat: r['État']||'',
-    price: parseFloat(r['Prix'])||0,
-    date: r['D.M.J']||'',
-    products: r['Produits']||''
-  }));
-  saveAmex();
-  renderAmex();
-  renderOrders();
-  renderKPIs();
-}
-
-function renderAmex(){
-  if(!axData.length) return;
-  const total = axData.length;
-  const delivered = axData.filter(r=>r.statut==='Livré');
-  const returned = axData.filter(r=>r.statut.includes('Retourné'));
-  const cancelled = axData.filter(r=>r.statut.includes('Annulé'));
-  const pending = axData.filter(r=>!r.statut.includes('Livré')&&!r.statut.includes('Retourné')&&!r.statut.includes('Annulé'));
-  const revenue = delivered.reduce((a,r)=>a+r.price,0);
-  const avgOrder = delivered.length ? revenue/delivered.length : 0;
-
-  // KPIs
-  document.getElementById('axTotal').textContent = total;
-  document.getElementById('axRevenue').textContent = dh(revenue);
-  document.getElementById('axDelivered').textContent = delivered.length;
-  document.getElementById('axReturned').textContent = returned.length;
-  document.getElementById('axCancelled').textContent = cancelled.length;
-  document.getElementById('axPending').textContent = pending.length;
-  document.getElementById('axDeliveryRate').textContent = (delivered.length/total*100).toFixed(1)+'%';
-  document.getElementById('axReturnRate').textContent = (returned.length/total*100).toFixed(1)+'%';
-  document.getElementById('axAvgOrder').textContent = dh(avgOrder);
-
-  // Status chart
-  if(axStatusChart) axStatusChart.destroy();
-  axStatusChart = new Chart(document.getElementById('axStatusChart'),{
-    type:'doughnut',
-    data:{labels:['Livré ✅','Retourné 🔄','Annulé ❌','En attente ⏳'],
-      datasets:[{data:[delivered.length,returned.length,cancelled.length,pending.length],
-        backgroundColor:['#10b981','#ef4444','#f59e0b','#3b82f6'],borderWidth:2,borderColor:'#fff'}]},
-    options:{responsive:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{font:{size:11,family:'Sora'},padding:8}}}}
-  });
-
-  // City counts
-  const cityCount={};
-  axData.forEach(r=>{cityCount[r.city]=(cityCount[r.city]||0)+1;});
-  const topCities=Object.entries(cityCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  const maxC=topCities.length?topCities[0][1]:1;
-  document.getElementById('axCityList').innerHTML=topCities.map(([c,n],i)=>`
-    <div class="city-row"><div class="city-rank">${i+1}</div><div class="cname">${c}</div>
-    <div class="cbar-wrap"><div class="cbar" style="width:${n/maxC*100}%"></div></div>
-    <div class="ccount">${n}</div></div>`).join('');
-
-  // Revenue by city
-  const cityRev={};
-  delivered.forEach(r=>{cityRev[r.city]=(cityRev[r.city]||0)+r.price;});
-  const topRev=Object.entries(cityRev).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  if(axRevenueChart) axRevenueChart.destroy();
-  axRevenueChart = new Chart(document.getElementById('axRevenueChart'),{
-    type:'bar',
-    data:{labels:topRev.map(x=>x[0]),datasets:[{data:topRev.map(x=>x[1]),backgroundColor:'#00c9a7cc',borderRadius:5}]},
-    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${dh(ctx.raw)}`}}},
-      scales:{x:{ticks:{callback:v=>dh(v),font:{size:10}},grid:{color:'#f1f5f9'}},y:{ticks:{font:{size:10}}}}}
-  });
-
-  // Daily orders
-  const daily={};
-  axData.forEach(r=>{
-    if(!r.date) return;
-    const d = String(r.date).split(' ')[0];
-    daily[d]=(daily[d]||0)+1;
-  });
-  const dk=Object.keys(daily).sort();
-  if(axDailyChart) axDailyChart.destroy();
-  axDailyChart = new Chart(document.getElementById('axDailyChart'),{
-    type:'line',
-    data:{labels:dk,datasets:[{data:dk.map(k=>daily[k]),borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,.08)',fill:true,tension:.4,pointRadius:3,borderWidth:2}]},
-    options:{responsive:true,plugins:{legend:{display:false}},
-      scales:{x:{ticks:{font:{size:9},maxTicksLimit:10},grid:{color:'#f1f5f9'}},y:{ticks:{font:{size:10}},grid:{color:'#f1f5f9'}}}}
-  });
-
-  // Table
-  const tbody=document.getElementById('axTableBody');
-  document.getElementById('axEmpty').style.display='none';
-  document.getElementById('axTableBadge').textContent=total+' orders';
-  const statusColor=s=>s==='Livré'?'#d1fae5;color:#065f46':s.includes('Retourné')?'#fee2e2;color:#991b1b':s.includes('Annulé')?'#fef3c7;color:#92400e':'#dbeafe;color:#1d4ed8';
-  const payColor=e=>e==='Payé'?'#d1fae5;color:#065f46':e==='Non Payé'?'#fee2e2;color:#991b1b':'#f1f5f9;color:#475569';
-  tbody.innerHTML=axData.map((r,i)=>`<tr>
-    <td style="color:var(--muted);font-weight:700">${i+1}</td>
-    <td style="font-size:10px;color:var(--muted)">${r.tracking.slice(-8)}</td>
-    <td style="font-weight:600">${r.customer}</td>
-    <td style="font-size:11px;color:var(--muted)">${r.phone}</td>
-    <td style="font-size:12px">${r.city}</td>
-    <td><span style="background:${statusColor(r.statut)};padding:2px 7px;border-radius:5px;font-size:10px;font-weight:700">${r.statut.split(' ')[0]}</span></td>
-    <td><span style="background:${payColor(r.etat)};padding:2px 7px;border-radius:5px;font-size:10px;font-weight:700">${r.etat}</span></td>
-    <td style="font-weight:700">${r.price>0?dh(r.price):'—'}</td>
-    <td style="font-size:11px;color:var(--muted)">${String(r.date).split(' ')[0]}</td>
-  </tr>`).join('');
-}
 // Polls the file every 3s, compares build hash meta tag
 // When a new file is dropped into the folder, the hash changes → shows update bar
-const BUILD_HASH = 'd9e83b12';
+const BUILD_HASH = 'e1a45c77';
 function checkForUpdate(){
   fetch(location.pathname + '?_=' + Date.now())
     .then(r => r.text())
