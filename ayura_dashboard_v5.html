@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AYÜRA DASHBOARD</title>
-<meta name="ayura-build" content="c4f72a91">
+<meta name="ayura-build" content="d9e83b12">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -272,7 +272,7 @@ tbody td{padding:10px 11px;font-size:12px;vertical-align:middle;}
     <div><div class="htitle">AYÜRA DASHBOARD</div><div class="hsub">Operations · Morocco</div></div>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
-    <div class="ver-badge" title="Build hash: c4f72a91">v · 28/04 01:15</div>
+    <div class="ver-badge" title="Build hash: d9e83b12">v · 28/04 01:45</div>
     <div class="date-badge" id="liveClock">27/04/2026</div>
     <button class="add-btn" onclick="openOrderModal()">＋ New Order</button>
   </div>
@@ -299,6 +299,13 @@ tbody td{padding:10px 11px;font-size:12px;vertical-align:middle;}
     <div class="kpi-card c-ship"><div class="kpi-name">Shipping</div><div class="kpi-val neutral" id="kpiShip">0 DH</div></div>
     <div class="kpi-card c-pack"><div class="kpi-name">Packaging</div><div class="kpi-val neutral" id="kpiPack">0 DH</div></div>
     <div class="kpi-card c-profit"><div class="kpi-name">Net Profit</div><div class="kpi-val neutral" id="kpiProfit">0 DH</div></div>
+  </div>
+  <!-- SOURCE FILTER -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+    <span style="font-size:11px;font-weight:700;color:var(--muted)">SHOW:</span>
+    <button class="df-pill active" id="sf-all" onclick="setOrderFilter('all')">All Orders</button>
+    <button class="df-pill" id="sf-manual" onclick="setOrderFilter('manual')">✋ Manual</button>
+    <button class="df-pill" id="sf-amex" onclick="setOrderFilter('amex')">🚚 Amex</button>
   </div>
   <div class="table-wrap">
     <div class="t-header"><div class="t-title">Order Tracker</div><div class="badge" id="orderBadge">0 orders</div></div>
@@ -1178,6 +1185,8 @@ if(sessionStorage.getItem('ayura_auth')==='1'){
 let orders=JSON.parse(localStorage.getItem('ayura_orders')||'[]');
 let products=JSON.parse(localStorage.getItem('ayura_products')||'[]');
 let capital=JSON.parse(localStorage.getItem('ayura_capital')||'[]');
+let axData=JSON.parse(localStorage.getItem('ayura_amex')||'[]');
+let orderFilter='all'; // all | manual | amex
 let editProdIdx=null;
 let selCityFee=null;
 let cityDDIdx=-1;
@@ -1196,6 +1205,9 @@ function save(){
   localStorage.setItem('ayura_orders',JSON.stringify(orders));
   localStorage.setItem('ayura_products',JSON.stringify(products));
   localStorage.setItem('ayura_capital',JSON.stringify(capital));
+}
+function saveAmex(){
+  localStorage.setItem('ayura_amex',JSON.stringify(axData));
 }
 
 // ===== CLOCK =====
@@ -1493,53 +1505,126 @@ function saveOrder(){
 function deleteOrder(id){if(!confirm('Delete?'))return;orders=orders.filter(o=>o.id!==id);save();renderOrders();renderKPIs();}
 
 // ===== RENDER ORDERS =====
+// ===== ORDER FILTER =====
+function setOrderFilter(f){
+  orderFilter=f;
+  ['all','manual','amex'].forEach(x=>{
+    document.getElementById('sf-'+x).classList.toggle('active',x===f);
+  });
+  renderOrders();renderKPIs();
+}
+
+// Convert amex row to unified order object
+function amexToOrder(r){
+  const ship=CITY_FEES[r.city]||45;
+  const profit=r.price-ship;
+  const dateStr=String(r.date).split(' ')[0]; // YYYY-MM-DD
+  let datetime=r.date?dateStr+' 00:00':nowStamp();
+  // convert YYYY-MM-DD to DD/MM/YYYY HH:MM
+  if(dateStr&&dateStr.includes('-')){
+    const[y,m,d]=dateStr.split('-');
+    const time=String(r.date).includes(' ')?String(r.date).split(' ')[1].slice(0,5):'00:00';
+    datetime=`${d}/${m}/${y} ${time}`;
+  }
+  const statusMap={
+    'Livré':'delivered',
+    'Retourné':'returned',
+    'Annulé':'returned',
+    'Attente':'confirmed'
+  };
+  const sKey=Object.keys(statusMap).find(k=>r.statut.startsWith(k))||'confirmed';
+  return {
+    id:'ax_'+r.tracking,
+    source:'amex',
+    datetime,
+    customer:r.customer,
+    productName:r.products||'Bijoux AYÜRA',
+    productBase:0,productQty:1,adsCost:0,
+    packagingItems:[],packagingCost:0,
+    city:r.city,shipping:ship,
+    salePrice:r.price,productCost:0,profit,
+    status:statusMap[sKey]||'confirmed',
+    retourPenalty:0,
+    tracking:r.tracking,phone:r.phone,etat:r.etat,statut:r.statut
+  };
+}
+
+function getAllOrders(){
+  const manual=orders.map(o=>({...o,source:o.source||'manual'}));
+  const amex=axData.map(r=>amexToOrder(r));
+  if(orderFilter==='manual') return manual;
+  if(orderFilter==='amex') return amex;
+  return [...manual,...amex].sort((a,b)=>parseDMY(b.datetime.split(' ')[0])-parseDMY(a.datetime.split(' ')[0]));
+}
+
 function renderOrders(){
   const tbody=document.getElementById('ordersBody');
   const empty=document.getElementById('ordersEmpty');
-  document.getElementById('orderBadge').textContent=orders.length+' order'+(orders.length!==1?'s':'');
-  if(!orders.length){tbody.innerHTML='';empty.style.display='block';return;}
+  const all=getAllOrders();
+  document.getElementById('orderBadge').textContent=all.length+' order'+(all.length!==1?'s':'');
+  if(!all.length){tbody.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
-  tbody.innerHTML=orders.map((o,i)=>{
+  tbody.innerHTML=all.map((o,i)=>{
     const pc=o.profit>0?'pp':o.profit<0?'pn':'pz';
-    const fee=CITY_FEES[o.city]||o.shipping;
+    const fee=CITY_FEES[o.city]||o.shipping||45;
+    const isAmex=o.source==='amex';
+    const sourceBadge=isAmex?'<span style="background:#ede9fe;color:#7c3aed;padding:1px 5px;border-radius:4px;font-size:9px;font-weight:700;margin-left:3px">🚚 Amex</span>':'';
     const items=o.packagingItems||[];
     const packHtml=items.length?items.map(r=>`<span class="pack-tag">${r.type}${r.qty>1?' ×'+r.qty:''}</span>`).join(''):'—';
     const qtyLabel=o.productQty>1?` ×${o.productQty}`:'';
     const retourTag=o.retourPenalty?`<span class="retour-tag">-${o.retourPenalty} DH</span>`:'';
+    const deleteBtn=isAmex?'':`<button class="act-btn del" onclick="deleteOrder(${o.id})">🗑</button>`;
     return `<tr>
       <td style="font-weight:700;color:var(--muted)">${i+1}</td>
       <td style="font-size:11px;color:var(--muted);white-space:nowrap">${o.datetime}</td>
-      <td style="font-weight:600">${o.customer}</td>
-      <td><span style="font-weight:700">${o.productName}${qtyLabel}</span><br><span style="font-size:10px;color:var(--muted)">${o.productBase} DH${o.adsCost?` +Ads ${o.adsCost}`:''}</span></td>
+      <td style="font-weight:600">${o.customer}${sourceBadge}</td>
+      <td><span style="font-weight:700">${o.productName}${qtyLabel}</span>${o.adsCost?`<br><span style="font-size:10px;color:var(--muted)">+Ads ${o.adsCost} DH</span>`:''}</td>
       <td>${packHtml}<div style="font-size:10px;color:var(--purple);font-weight:700;margin-top:2px">${dh(o.packagingCost||0)}</div></td>
       <td><span style="font-size:12px;font-weight:600">${o.city}</span><br><span class="fee-badge ${feeCls(fee)}" style="font-size:9px">${fee} DH</span></td>
-      <td>${renderStatusCell(o)}</td>
+      <td>${isAmex?renderAmexStatusCell(o):renderStatusCell(o)}</td>
       <td style="font-weight:700">${dh(o.salePrice)}</td>
       <td style="color:var(--amber);font-weight:700">${dh(o.productCost||0)}</td>
       <td style="color:var(--blue);font-weight:700">${dh(o.shipping)}</td>
       <td class="${pc}">${dh(o.profit)}${retourTag}</td>
-      <td><button class="act-btn del" onclick="deleteOrder(${o.id})">🗑</button></td>
+      <td>${deleteBtn}</td>
     </tr>`;
   }).join('');
 }
 
-// ===== KPIs (all-time) =====
+function renderAmexStatusCell(o){
+  const SC={confirmed:'st-confirmed',transit:'st-transit',delivered:'st-delivered',returned:'st-returned'};
+  const SW={confirmed:'25%',transit:'50%',delivered:'100%',returned:'100%'};
+  const SCol={confirmed:'#3b82f6',transit:'#f59e0b',delivered:'#10b981',returned:'#ef4444'};
+  const SL={confirmed:'🔵 Confirmed',transit:'🟡 In Transit',delivered:'🟢 Delivered',returned:'🔴 Returned'};
+  return `<div class="status-cell">
+    <div class="status-badge-wrap">
+      <div class="status-badge ${SC[o.status]||'st-confirmed'}">${SL[o.status]||'🔵 Confirmed'}</div>
+    </div>
+    <div class="pb-outer"><div class="pb-inner" style="width:${SW[o.status]||'25%'};background:${SCol[o.status]||'#3b82f6'}"></div></div>
+  </div>`;
+}
+
+// ===== KPIs (combined manual + amex based on filter) =====
 function renderKPIs(){
-  const rev=orders.reduce((a,o)=>a+o.salePrice,0);
-  const cost=orders.reduce((a,o)=>a+(o.productCost||0),0);
-  const ship=orders.reduce((a,o)=>a+o.shipping,0);
-  const pack=orders.reduce((a,o)=>a+(o.packagingCost||0),0);
-  const profit=orders.reduce((a,o)=>a+o.profit,0);
+  const all=getAllOrders();
+  const rev=all.reduce((a,o)=>a+o.salePrice,0);
+  const cost=all.reduce((a,o)=>a+(o.productCost||0),0);
+  const ship=all.reduce((a,o)=>a+o.shipping,0);
+  const pack=all.reduce((a,o)=>a+(o.packagingCost||0),0);
+  const profit=all.reduce((a,o)=>a+o.profit,0);
   const set=(id,val,cls)=>{const el=document.getElementById(id);if(el){el.textContent=val;el.className='kpi-val '+(cls||'neutral');}};
   set('kpiRev',dh(rev));set('kpiCost',dh(cost));set('kpiShip',dh(ship));set('kpiPack',dh(pack));
   set('kpiProfit',dh(profit),profit>0?'pos':profit<0?'neg':'neutral');
 }
 
-// ===== WALLET (filtered) =====
+// ===== WALLET (filtered, combined manual + amex) =====
 let cStatus=null,cProduct=null,cDaily=null;
 function renderWallet(){
   const range=getDateRange(walletFilter,walletCustomFrom,walletCustomTo);
-  const data=orders.filter(o=>inRange(o.datetime,range.from,range.to));
+  const manual=orders.map(o=>({...o,source:'manual'}));
+  const amex=axData.map(r=>amexToOrder(r));
+  const combined=[...manual,...amex];
+  const data=combined.filter(o=>inRange(o.datetime,range.from,range.to));
   const rev=data.reduce((a,o)=>a+o.salePrice,0);
   const cost=data.reduce((a,o)=>a+(o.productCost||0),0);
   const ship=data.reduce((a,o)=>a+o.shipping,0);
@@ -1771,9 +1856,9 @@ if(!products.length){
   ];save();
 }
 renderOrders();renderProds();renderKPIs();
+if(axData.length) renderAmex();
 
 // ===== AMEX IMPORT =====
-let axData = [];
 let axStatusChart = null, axRevenueChart = null, axDailyChart = null;
 
 function loadAmexFile(event){
@@ -1812,7 +1897,10 @@ function parseAmexXLSX(buffer){
     date: r['D.M.J']||'',
     products: r['Produits']||''
   }));
+  saveAmex();
   renderAmex();
+  renderOrders();
+  renderKPIs();
 }
 
 function renderAmex(){
@@ -1904,7 +1992,7 @@ function renderAmex(){
 }
 // Polls the file every 3s, compares build hash meta tag
 // When a new file is dropped into the folder, the hash changes → shows update bar
-const BUILD_HASH = 'c4f72a91';
+const BUILD_HASH = 'd9e83b12';
 function checkForUpdate(){
   fetch(location.pathname + '?_=' + Date.now())
     .then(r => r.text())
