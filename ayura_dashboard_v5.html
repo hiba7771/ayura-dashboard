@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AYÜRA DASHBOARD</title>
-<meta name="ayura-build" content="b9f14e23">
+<meta name="ayura-build" content="c2d85a41">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -54,7 +54,10 @@ body{font-family:'Sora',sans-serif;background:#edf1f7;color:var(--text);font-siz
 .tab.active{color:var(--teal);border-bottom-color:var(--teal);}
 
 /* VIEWS */
-.view{display:none;padding:24px 32px 40px;}
+.view{display:none;padding:24px 32px 40px;min-height:calc(100vh - 120px);}
+.view.active{display:flex;flex-direction:column;}
+#view-orders .table-wrap{flex:1;display:flex;flex-direction:column;}
+#view-orders .table-wrap>div{flex:1;overflow-x:auto;}
 .view.active{display:block;}
 
 /* KPI */
@@ -271,7 +274,7 @@ tbody td{padding:10px 11px;font-size:12px;vertical-align:middle;}
     <div><div class="htitle">AYÜRA DASHBOARD</div><div class="hsub">Operations · Morocco</div></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
-    <div class="ver-badge" title="Build hash: b9f14e23">v · 28/04 03:30</div>
+    <div class="ver-badge" title="Build hash: b9f14e23">v · 29/04 14:25</div>
     <div class="date-badge" id="liveClock">27/04/2026</div>
     <button onclick="exportBackup()" title="Download backup" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#6ee7b7;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">💾 Backup</button>
     <label title="Restore from backup" style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:#93c5fd;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">📂 Restore<input type="file" accept=".json" style="display:none" onchange="importBackup(event)"/></label>
@@ -1269,13 +1272,16 @@ function setStatus(orderId,status){
   const o=orders.find(x=>x.id===orderId);if(!o)return;
   const prev=o.status;
   o.status=status;
-  if(status==='returned'&&prev!=='returned'){
+  // Recalculate profit from scratch based on status
+  const baseCost=(o.productCost||0)+(o.packagingCost||0)+(o.shipping||0);
+  if(status==='returned'){
+    // Returned: lose all costs + 16dh retour penalty, sale price is 0 (not collected)
     o.retourPenalty=16;
-    o.profit=o.profit-16;
-  }
-  if(prev==='returned'&&status!=='returned'&&o.retourPenalty){
-    o.profit=o.profit+o.retourPenalty;
+    o.profit=-(baseCost+16);
+  } else {
+    // Any other status: normal profit
     o.retourPenalty=0;
+    o.profit=o.salePrice-baseCost;
   }
   save();renderOrders();renderKPIs();
   document.querySelectorAll('.status-dropdown.open').forEach(d=>d.classList.remove('open'));
@@ -1880,7 +1886,7 @@ try{
 
 // Polls the file every 3s, compares build hash meta tag
 // When a new file is dropped into the folder, the hash changes → shows update bar
-const BUILD_HASH = 'b9f14e23';
+const BUILD_HASH = 'c2d85a41';
 function checkForUpdate(){
   fetch(location.pathname + '?_=' + Date.now())
     .then(r => r.text())
