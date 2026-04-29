@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AYÜRA DASHBOARD</title>
-<meta name="ayura-build" content="c2d85a41">
+<meta name="ayura-build" content="d4e96b52">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -274,7 +274,7 @@ tbody td{padding:10px 11px;font-size:12px;vertical-align:middle;}
     <div><div class="htitle">AYÜRA DASHBOARD</div><div class="hsub">Operations · Morocco</div></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
-    <div class="ver-badge" title="Build hash: b9f14e23">v · 29/04 14:25</div>
+    <div class="ver-badge" title="Build hash: b9f14e23">v · 29/04 14:30</div>
     <div class="date-badge" id="liveClock">27/04/2026</div>
     <button onclick="exportBackup()" title="Download backup" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#6ee7b7;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">💾 Backup</button>
     <label title="Restore from backup" style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:#93c5fd;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">📂 Restore<input type="file" accept=".json" style="display:none" onchange="importBackup(event)"/></label>
@@ -1270,16 +1270,12 @@ document.addEventListener('click',e=>{if(!e.target.closest('.status-badge-wrap')
 
 function setStatus(orderId,status){
   const o=orders.find(x=>x.id===orderId);if(!o)return;
-  const prev=o.status;
   o.status=status;
-  // Recalculate profit from scratch based on status
   const baseCost=(o.productCost||0)+(o.packagingCost||0)+(o.shipping||0);
   if(status==='returned'){
-    // Returned: lose all costs + 16dh retour penalty, sale price is 0 (not collected)
     o.retourPenalty=16;
-    o.profit=-(baseCost+16);
+    o.profit=-16; // only the penalty, no profit
   } else {
-    // Any other status: normal profit
     o.retourPenalty=0;
     o.profit=o.salePrice-baseCost;
   }
@@ -1537,6 +1533,9 @@ function renderOrders(){
     const packHtml=items.length?items.map(r=>`<span class="pack-tag">${r.type}${r.qty>1?' ×'+r.qty:''}</span>`).join(''):'—';
     const qtyLabel=o.productQty>1?` ×${o.productQty}`:'';
     const retourTag=o.retourPenalty?`<span class="retour-tag">-${o.retourPenalty} DH</span>`:'';
+    const profitDisplay=o.status==='returned'
+      ? `<td>${retourTag}</td>`
+      : `<td class="${pc}">${dh(o.profit)}</td>`;
     return `<tr>
       <td style="font-weight:700;color:var(--muted)">${i+1}</td>
       <td style="font-size:11px;color:var(--muted);white-space:nowrap">${o.datetime}</td>
@@ -1548,7 +1547,7 @@ function renderOrders(){
       <td style="font-weight:700">${dh(o.salePrice)}</td>
       <td style="color:var(--amber);font-weight:700">${dh(o.productCost||0)}</td>
       <td style="color:var(--blue);font-weight:700">${dh(o.shipping)}</td>
-      <td class="${pc}">${dh(o.profit)}${retourTag}</td>
+      ${profitDisplay}
       <td><button class="act-btn del" onclick="deleteOrder(${o.id})">🗑</button></td>
     </tr>`;
   }).join('');
@@ -1886,7 +1885,7 @@ try{
 
 // Polls the file every 3s, compares build hash meta tag
 // When a new file is dropped into the folder, the hash changes → shows update bar
-const BUILD_HASH = 'c2d85a41';
+const BUILD_HASH = 'd4e96b52';
 function checkForUpdate(){
   fetch(location.pathname + '?_=' + Date.now())
     .then(r => r.text())
