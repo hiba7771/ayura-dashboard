@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AYÜRA DASHBOARD</title>
-<meta name="ayura-build" content="a7c92e14">
+<meta name="ayura-build" content="b9f14e23">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -270,9 +270,11 @@ tbody td{padding:10px 11px;font-size:12px;vertical-align:middle;}
     <div class="hlogo">✦</div>
     <div><div class="htitle">AYÜRA DASHBOARD</div><div class="hsub">Operations · Morocco</div></div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px">
-    <div class="ver-badge" title="Build hash: a7c92e14">v · 28/04 02:50</div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div class="ver-badge" title="Build hash: b9f14e23">v · 28/04 03:30</div>
     <div class="date-badge" id="liveClock">27/04/2026</div>
+    <button onclick="exportBackup()" title="Download backup" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#6ee7b7;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">💾 Backup</button>
+    <label title="Restore from backup" style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:#93c5fd;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">📂 Restore<input type="file" accept=".json" style="display:none" onchange="importBackup(event)"/></label>
     <button class="add-btn" onclick="openOrderModal()">＋ New Order</button>
   </div>
 </div>
@@ -282,7 +284,20 @@ tbody td{padding:10px 11px;font-size:12px;vertical-align:middle;}
   ⟳ New version available — click to reload
 </div>
 
-<div class="tabs">
+<!-- BACKUP BAR -->
+<div style="background:var(--navy2);padding:6px 32px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.05)">
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:10px;color:rgba(255,255,255,.35);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Auto-backup</span>
+    <span style="font-size:11px;color:rgba(255,255,255,.5)" id="backupStatus">—</span>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button onclick="downloadBackup()" style="background:rgba(0,201,167,.15);border:1px solid rgba(0,201,167,.3);color:var(--teal);padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='rgba(0,201,167,.25)'" onmouseout="this.style.background='rgba(0,201,167,.15)'">⬇ Download Backup</button>
+    <label style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:#93c5fd;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">
+      ⬆ Restore Backup
+      <input type="file" accept=".json" style="display:none" onchange="importBackup(event)"/>
+    </label>
+  </div>
+</div>
   <div class="tab active" onclick="switchTab('orders')" id="tab-orders">📦 Orders</div>
   <div class="tab" onclick="switchTab('wallet')" id="tab-wallet">💳 Wallet</div>
   <div class="tab" onclick="switchTab('capital')" id="tab-capital">📊 Capital</div>
@@ -1105,7 +1120,44 @@ function save(){
   localStorage.setItem('ayura_orders',JSON.stringify(orders));
   localStorage.setItem('ayura_products',JSON.stringify(products));
   localStorage.setItem('ayura_capital',JSON.stringify(capital));
+  // Auto-backup to localStorage with timestamp
+  const backup={orders,products,capital,savedAt:nowStamp(),version:'ayura_v1'};
+  localStorage.setItem('ayura_backup',JSON.stringify(backup));
+  // Update backup indicator
+  const el=document.getElementById('backupStatus');
+  if(el) el.textContent='✅ Backed up '+nowStamp();
 }
+
+function downloadBackup(){
+  const backup={orders,products,capital,savedAt:nowStamp(),version:'ayura_v1'};
+  const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const n=new Date(),p=v=>String(v).padStart(2,'0');
+  a.download=`ayura-backup-${n.getFullYear()}${p(n.getMonth()+1)}${p(n.getDate())}-${p(n.getHours())}${p(n.getMinutes())}.json`;
+  a.click();
+}
+
+function importBackup(event){
+  const file=event.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.version||!data.orders){alert('Invalid backup file.');return;}
+      if(!confirm(`Restore backup from ${data.savedAt}?\n\nThis will replace your current data with:\n• ${data.orders.length} orders\n• ${data.products.length} products\n• ${data.capital?.length||0} capital entries\n\nContinue?`)) return;
+      orders=data.orders||[];
+      products=data.products||[];
+      capital=data.capital||[];
+      save();
+      renderOrders();renderProds();renderKPIs();
+      alert('✅ Backup restored successfully!');
+    } catch(err){alert('Error reading backup: '+err.message);}
+  };
+  reader.readAsText(file);
+}
+
 
 // ===== CLOCK =====
 function updateClock(){const n=new Date(),p=v=>String(v).padStart(2,'0');document.getElementById('liveClock').textContent=`${p(n.getDate())}/${p(n.getMonth()+1)}/${n.getFullYear()} ${p(n.getHours())}:${p(n.getMinutes())}`;}
@@ -1460,7 +1512,7 @@ function saveOrder(){
     city,shipping:shipCost,salePrice:sale,productCost:prodCost,profit,
     status:'confirmed',retourPenalty:0
   });
-  save();closeOrderModal();renderOrders();renderKPIs();
+  save();closeOrderModal();renderOrders();renderKPIs();checkBackupReminder();
 }
 function deleteOrder(id){if(!confirm('Delete?'))return;orders=orders.filter(o=>o.id!==id);save();renderOrders();renderKPIs();}
 
@@ -1730,7 +1782,76 @@ function renderProds(){
 
 function overlayClose(e,id){if(e.target.id===id)document.getElementById(id).classList.remove('open');}
 
-// ===== INIT =====
+// ===== BACKUP & RESTORE =====
+function exportBackup(){
+  const data={
+    orders,products,capital,
+    exportedAt:nowStamp(),
+    version:'ayura-v5'
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const d=new Date();
+  const pad=v=>String(v).padStart(2,'0');
+  a.href=url;
+  a.download=`ayura-backup-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ Backup downloaded! Save it somewhere safe.');
+}
+
+function importBackup(event){
+  const file=event.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.version||!data.version.startsWith('ayura')){
+        alert('❌ Invalid backup file. Make sure you select an AYÜRA backup.');
+        return;
+      }
+      if(!confirm(`Restore backup from ${data.exportedAt}?\n\nThis will replace your current data with the backup.\n\nCurrent orders: ${orders.length}\nBackup orders: ${(data.orders||[]).length}`)) return;
+      orders=data.orders||[];
+      products=data.products||[];
+      capital=data.capital||[];
+      save();
+      renderOrders();renderProds();renderKPIs();
+      showToast(`✅ Restored! ${orders.length} orders, ${products.length} products loaded.`);
+    } catch(err){
+      alert('❌ Could not read backup file: '+err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
+
+// Auto-backup reminder every 10 orders
+function checkBackupReminder(){
+  const count=orders.length;
+  const lastReminder=parseInt(localStorage.getItem('ayura_last_reminder')||'0');
+  if(count>0&&count%10===0&&count!==lastReminder){
+    localStorage.setItem('ayura_last_reminder',count);
+    showToast('💾 You have '+count+' orders! Click Backup to save a copy.',5000);
+  }
+}
+
+function showToast(msg,duration=3000){
+  let toast=document.getElementById('ayuraToast');
+  if(!toast){
+    toast=document.createElement('div');
+    toast.id='ayuraToast';
+    toast.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--navy2);border:1px solid var(--teal);color:#fff;padding:12px 24px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.3);transition:opacity .3s;pointer-events:none;font-family:Sora,sans-serif;';
+    document.body.appendChild(toast);
+  }
+  toast.textContent=msg;
+  toast.style.opacity='1';
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>toast.style.opacity='0',duration);
+}
+
+
 if(!products.length){
   products=[
     {name:'Necklace',price:20,category:'Jewellery',stock:50},
@@ -1746,9 +1867,19 @@ if(!products.length){
 }
 renderOrders();renderProds();renderKPIs();
 
+// Show last backup time on load
+try{
+  const lastBackup=localStorage.getItem('ayura_backup');
+  if(lastBackup){
+    const b=JSON.parse(lastBackup);
+    const el=document.getElementById('backupStatus');
+    if(el) el.textContent=`✅ Last saved ${b.savedAt} · ${b.orders?.length||0} orders`;
+  }
+}catch(e){}
+
 // Polls the file every 3s, compares build hash meta tag
 // When a new file is dropped into the folder, the hash changes → shows update bar
-const BUILD_HASH = 'a7c92e14';
+const BUILD_HASH = 'b9f14e23';
 function checkForUpdate(){
   fetch(location.pathname + '?_=' + Date.now())
     .then(r => r.text())
