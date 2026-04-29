@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AYÜRA DASHBOARD</title>
-<meta name="ayura-build" content="f3b61d08">
+<meta name="ayura-build" content="a7c92e14">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -271,7 +271,7 @@ tbody td{padding:10px 11px;font-size:12px;vertical-align:middle;}
     <div><div class="htitle">AYÜRA DASHBOARD</div><div class="hsub">Operations · Morocco</div></div>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
-    <div class="ver-badge" title="Build hash: f3b61d08">v · 28/04 02:30</div>
+    <div class="ver-badge" title="Build hash: a7c92e14">v · 28/04 02:50</div>
     <div class="date-badge" id="liveClock">27/04/2026</div>
     <button class="add-btn" onclick="openOrderModal()">＋ New Order</button>
   </div>
@@ -1320,44 +1320,72 @@ function selectAds(val){
 // ===== RECALC =====
 // ===== MULTI-PRODUCT ROWS =====
 function buildProdOptions(){
-  return '<option value="">— Select —</option>'+products.map((p,i)=>`<option value="${i}">${p.name} — ${p.price} DH</option>`).join('');
+  return '<option value="">— Select or type custom —</option>'+
+    products.map((p,i)=>`<option value="${i}">${p.name} — ${p.price} DH</option>`).join('')+
+    '<option value="custom">✏️ Custom product...</option>';
 }
+
 function renderProductRows(){
   const c=document.getElementById('productRows');
-  if(!productRows.length){
-    productRows.push({idx:'',qty:1});
-  }
-  c.innerHTML=productRows.map((row,i)=>`
-    <div class="pack-row" style="margin-bottom:5px">
-      <select class="fsel" onchange="updateProductRow(${i},'idx',this.value)">${buildProdOptions().replace(`value="${row.idx}"`,`value="${row.idx}" selected`)}</select>
-      <div class="qty-wrap"><button class="qty-btn" onclick="prodRowQtyAdj(${i},-1)">−</button><input class="qty-input" type="number" value="${row.qty}" min="1" max="99" oninput="updateProductRow(${i},'qty',this.value)"/><button class="qty-btn" onclick="prodRowQtyAdj(${i},1)">＋</button></div>
-      <div class="pack-row-cost" id="prodRowCost${i}">${row.idx!==''?dh(products[row.idx].price*row.qty):'—'}</div>
-      ${productRows.length>1?`<button class="pack-remove" onclick="removeProductRow(${i})">✕</button>`:''}
-    </div>`).join('');
+  if(!productRows.length) productRows.push({idx:'',qty:1,manualPrice:'',customName:''});
+  c.innerHTML=productRows.map((row,i)=>{
+    const opts=buildProdOptions().replace(`value="${row.idx}"`,`value="${row.idx}" selected`);
+    const isCustom=row.idx==='custom';
+    const autoPrice=row.idx!==''&&row.idx!=='custom'?products[row.idx].price:null;
+    const effectivePrice=row.manualPrice!==''?parseFloat(row.manualPrice):autoPrice;
+    const rowCost=effectivePrice!==null&&!isNaN(effectivePrice)?dh(effectivePrice*row.qty):'—';
+    return `<div style="background:var(--light);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:${isCustom?'6px':'4px'}">
+        <select class="fsel" style="flex:1;padding:5px 8px;font-size:12px" onchange="updateProductRow(${i},'idx',this.value)">${opts}</select>
+        <div class="qty-wrap"><button class="qty-btn" onclick="prodRowQtyAdj(${i},-1)">−</button><input class="qty-input" type="number" value="${row.qty}" min="1" max="99" oninput="updateProductRow(${i},'qty',this.value)"/><button class="qty-btn" onclick="prodRowQtyAdj(${i},1)">＋</button></div>
+        ${productRows.length>1?`<button class="pack-remove" onclick="removeProductRow(${i})">✕</button>`:''}
+      </div>
+      ${isCustom?`<input class="finput" style="margin-bottom:4px;padding:5px 8px;font-size:12px" placeholder="Product name" value="${row.customName||''}" oninput="updateProductRow(${i},'customName',this.value)"/>`:''}
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="font-size:10px;color:var(--muted);font-weight:600;white-space:nowrap">Price (DH):</div>
+        <input class="finput" type="number" min="0" style="width:90px;padding:4px 8px;font-size:12px" 
+          placeholder="${autoPrice!==null?autoPrice+' (auto)':'manual'}" 
+          value="${row.manualPrice}" 
+          oninput="updateProductRow(${i},'manualPrice',this.value)"/>
+        <div style="font-size:11px;color:var(--muted)">× ${row.qty} =</div>
+        <div style="font-size:12px;font-weight:700;color:var(--purple)" id="prodRowCost${i}">${rowCost}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
-function addProductRow(){productRows.push({idx:'',qty:1});renderProductRows();recalc();}
-function removeProductRow(i){productRows.splice(i,1);if(!productRows.length)productRows.push({idx:'',qty:1});renderProductRows();recalc();}
+
+function addProductRow(){productRows.push({idx:'',qty:1,manualPrice:'',customName:''});renderProductRows();recalc();}
+function removeProductRow(i){productRows.splice(i,1);if(!productRows.length)productRows.push({idx:'',qty:1,manualPrice:'',customName:''});renderProductRows();recalc();}
 function updateProductRow(i,field,val){
-  productRows[i][field]=field==='qty'?Math.max(1,Math.min(99,parseInt(val)||1)):val;
+  if(field==='qty') productRows[i].qty=Math.max(1,Math.min(99,parseInt(val)||1));
+  else productRows[i][field]=val;
+  // If switching away from custom, clear customName
+  if(field==='idx'&&val!=='custom') productRows[i].customName='';
   recalc();
-  const costEl=document.getElementById('prodRowCost'+i);
-  if(costEl&&productRows[i].idx!=='') costEl.textContent=dh(products[productRows[i].idx].price*productRows[i].qty);
+  renderProductRows();
 }
 function prodRowQtyAdj(i,delta){
   productRows[i].qty=Math.max(1,Math.min(99,(productRows[i].qty||1)+delta));
   renderProductRows();recalc();
 }
+function getRowEffectivePrice(row){
+  if(row.manualPrice!==''){
+    const p=parseFloat(row.manualPrice);
+    return isNaN(p)?0:p;
+  }
+  if(row.idx!==''&&row.idx!=='custom'&&products[row.idx]) return products[row.idx].price;
+  return 0;
+}
+function getRowName(row){
+  if(row.idx==='custom') return row.customName||'Custom';
+  if(row.idx!=='') return products[row.idx]?.name||'';
+  return '';
+}
 function totalProductCost(){
   return productRows.reduce((s,r)=>{
-    if(r.idx==='') return s;
-    return s+products[r.idx].price*r.qty;
+    if(!r.idx&&!r.customName) return s;
+    return s+getRowEffectivePrice(r)*r.qty;
   },0);
-}
-function getProductSummary(){
-  // Returns {name, base, qty} for display — use first valid product as primary, list others
-  const valid=productRows.filter(r=>r.idx!=='');
-  if(!valid.length) return null;
-  return valid;
 }
 
 function recalc(){
@@ -1390,7 +1418,7 @@ function openOrderModal(){
   document.getElementById('fShipDisplay').value='';
   ['ppProd','ppPack','ppShip','ppProfit'].forEach(id=>{document.getElementById(id).textContent='—';document.getElementById(id).style.color='';});
   selCityFee=null;selAdsCost=0;packRows=[];quickPackType=null;
-  productRows=[{idx:'',qty:1}];
+  productRows=[{idx:'',qty:1,manualPrice:'',customName:''}];
   document.querySelectorAll('.pack-card').forEach(c=>c.classList.remove('selected'));
   document.querySelectorAll('.ads-pill').forEach(el=>el.classList.toggle('selected',el.dataset.val==='0'));
   renderPackRows();
@@ -1404,19 +1432,18 @@ function saveOrder(){
   const name=document.getElementById('fName').value.trim();
   const sale=parseFloat(document.getElementById('fSale').value);
   const city=document.getElementById('fCityVal').value.trim();
-  const validProds=productRows.filter(r=>r.idx!=='');
+  const validProds=productRows.filter(r=>r.idx!==''||r.customName);
   if(!name){alert('Enter customer name.');return;}
   if(!validProds.length){alert('Select at least one product.');return;}
   if(isNaN(sale)||sale<=0){alert('Enter a valid sale price.');return;}
   if(!city||selCityFee===null){alert('Select a city.');return;}
   if(!packRows.length){alert('Add at least one packaging option.');return;}
 
-  // Build product name summary
   const prodSummary=validProds.map(r=>{
-    const p=products[r.idx];
-    return r.qty>1?`${p.name} ×${r.qty}`:p.name;
+    const n=getRowName(r);
+    return r.qty>1?`${n} ×${r.qty}`:n;
   }).join(' + ');
-  const firstProd=products[validProds[0].idx];
+  const firstProd=validProds[0];
   const prodCost=totalProductCost()+selAdsCost;
   const packCost=totalPackCost();
   const shipCost=selCityFee;
@@ -1425,9 +1452,9 @@ function saveOrder(){
   orders.push({
     id:Date.now(),datetime:nowStamp(),customer:name,
     productName:prodSummary,
-    productBase:firstProd.price,
+    productBase:getRowEffectivePrice(firstProd),
     productQty:validProds.reduce((s,r)=>s+r.qty,0),
-    productRows:validProds.map(r=>({name:products[r.idx].name,price:products[r.idx].price,qty:r.qty})),
+    productRows:validProds.map(r=>({name:getRowName(r),price:getRowEffectivePrice(r),qty:r.qty})),
     adsCost:selAdsCost,
     packagingItems:packRows.map(r=>({...r})),packagingCost:packCost,
     city,shipping:shipCost,salePrice:sale,productCost:prodCost,profit,
@@ -1721,7 +1748,7 @@ renderOrders();renderProds();renderKPIs();
 
 // Polls the file every 3s, compares build hash meta tag
 // When a new file is dropped into the folder, the hash changes → shows update bar
-const BUILD_HASH = 'f3b61d08';
+const BUILD_HASH = 'a7c92e14';
 function checkForUpdate(){
   fetch(location.pathname + '?_=' + Date.now())
     .then(r => r.text())
