@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AYÜRA DASHBOARD</title>
-<meta name="ayura-build" content="e5f07c63">
+<meta name="ayura-build" content="f6a18d74">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -274,7 +274,7 @@ tbody td{padding:10px 11px;font-size:12px;vertical-align:middle;}
     <div><div class="htitle">AYÜRA DASHBOARD</div><div class="hsub">Operations · Morocco</div></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
-    <div class="ver-badge" title="Build hash: b9f14e23">v · 29/04 14:35</div>
+    <div class="ver-badge" title="Build hash: b9f14e23">v · 29/04 14:45</div>
     <div class="date-badge" id="liveClock">27/04/2026</div>
     <button onclick="exportBackup()" title="Download backup" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#6ee7b7;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">💾 Backup</button>
     <label title="Restore from backup" style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:#93c5fd;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">📂 Restore<input type="file" accept=".json" style="display:none" onchange="importBackup(event)"/></label>
@@ -445,6 +445,7 @@ tbody td{padding:10px 11px;font-size:12px;vertical-align:middle;}
           <div class="pack-card" id="pc-boitedin" onclick="selectPackType('Boite Din',28)"><div class="pack-card-name">📦 Boite Din</div><div class="pack-card-price">28 DH</div></div>
           <div class="pack-card" id="pc-boiteforyou" onclick="selectPackType('Boite For You',23)"><div class="pack-card-name">🎁 Boite For You</div><div class="pack-card-price">23 DH</div></div>
           <div class="pack-card" id="pc-boite" onclick="selectPackType('Boite',18)"><div class="pack-card-name">🗃️ Boite</div><div class="pack-card-price">18 DH</div></div>
+          <div class="pack-card" id="pc-custom" onclick="selectPackType('Custom',0)"><div class="pack-card-name">✏️ Custom</div><div class="pack-card-price">? DH</div></div>
         </div>
         <div class="pack-rows" id="packRows"></div>
         <button class="add-pack-btn" onclick="addPackRow()">＋ Add Another Packaging</button>
@@ -1075,7 +1076,7 @@ const CITY_FEES = {
 };
 
 const CITY_NAMES=Object.keys(CITY_FEES).sort((a,b)=>a.localeCompare(b,'fr'));
-const PACK_OPTS={'Boite Din':28,'Boite For You':23,'Boite':18};
+const PACK_OPTS={'Boite Din':28,'Boite For You':23,'Boite':18,'Custom':0};
 const PRESET={'Necklace':20,'Necklace XP':30,'Bracelet':20,'Bracelet XP':30,'Tulipe 1':25,'Pack Duo':30,'Trio':35,'Boucles':8,'Boucle':10};
 const PASSWORD='hibam00n';
 
@@ -1335,13 +1336,13 @@ function adjustQty(id,delta){
 function selectPackType(type,cost){
   quickPackType=type;
   document.querySelectorAll('.pack-card').forEach(c=>c.classList.remove('selected'));
-  const idMap={'Boite Din':'pc-boitedin','Boite For You':'pc-boiteforyou','Boite':'pc-boite'};
-  document.getElementById(idMap[type]).classList.add('selected');
-  if(packRows.length===0) packRows.push({type,qty:1});
+  const idMap={'Boite Din':'pc-boitedin','Boite For You':'pc-boiteforyou','Boite':'pc-boite','Custom':'pc-custom'};
+  if(idMap[type]) document.getElementById(idMap[type]).classList.add('selected');
+  if(packRows.length===0) packRows.push({type,qty:1,customName:'',customPrice:''});
   else packRows[0].type=type;
   renderPackRows();recalc();
 }
-function addPackRow(){packRows.push({type:quickPackType||'Boite Din',qty:1});renderPackRows();recalc();}
+function addPackRow(){packRows.push({type:quickPackType||'Boite Din',qty:1,customName:'',customPrice:''});renderPackRows();recalc();}
 function removePackRow(idx){
   packRows.splice(idx,1);
   if(!packRows.length){quickPackType=null;document.querySelectorAll('.pack-card').forEach(c=>c.classList.remove('selected'));}
@@ -1350,20 +1351,37 @@ function removePackRow(idx){
 function updatePackRow(idx,field,value){
   packRows[idx][field]=field==='qty'?Math.max(1,Math.min(99,parseInt(value)||1)):value;
   recalc();
+  renderPackRows();
 }
 function packQtyAdj(idx,delta){packRows[idx].qty=Math.max(1,Math.min(99,(packRows[idx].qty||1)+delta));renderPackRows();recalc();}
+function getPackRowCost(row){
+  if(row.type==='Custom') return parseFloat(row.customPrice)||0;
+  return (PACK_OPTS[row.type]||0);
+}
 function renderPackRows(){
   const c=document.getElementById('packRows');
   if(!packRows.length){c.innerHTML='';return;}
-  c.innerHTML=packRows.map((row,i)=>`
-    <div class="pack-row">
-      <select class="fsel" onchange="updatePackRow(${i},'type',this.value)">${Object.keys(PACK_OPTS).map(t=>`<option value="${t}" ${row.type===t?'selected':''}>${t} — ${PACK_OPTS[t]} DH</option>`).join('')}</select>
-      <div class="qty-wrap"><button class="qty-btn" onclick="packQtyAdj(${i},-1)">−</button><input class="qty-input" id="pq${i}" type="number" value="${row.qty}" min="1" max="99" oninput="updatePackRow(${i},'qty',this.value)"/><button class="qty-btn" onclick="packQtyAdj(${i},1)">＋</button></div>
-      <div class="pack-row-cost">${dh(PACK_OPTS[row.type]*row.qty)}</div>
-      <button class="pack-remove" onclick="removePackRow(${i})">✕</button>
-    </div>`).join('');
+  c.innerHTML=packRows.map((row,i)=>{
+    const isCustom=row.type==='Custom';
+    const unitCost=getPackRowCost(row);
+    const totalCost=unitCost*row.qty;
+    return `<div class="pack-row" style="flex-direction:column;align-items:stretch;gap:5px">
+      <div style="display:flex;align-items:center;gap:6px">
+        <select class="fsel" style="flex:1;padding:4px 8px;font-size:11px" onchange="updatePackRow(${i},'type',this.value)">
+          ${Object.keys(PACK_OPTS).map(t=>`<option value="${t}" ${row.type===t?'selected':''}>${t==='Custom'?'✏️ Custom':t+' — '+PACK_OPTS[t]+' DH'}</option>`).join('')}
+        </select>
+        <div class="qty-wrap"><button class="qty-btn" onclick="packQtyAdj(${i},-1)">−</button><input class="qty-input" id="pq${i}" type="number" value="${row.qty}" min="1" max="99" oninput="updatePackRow(${i},'qty',this.value)"/><button class="qty-btn" onclick="packQtyAdj(${i},1)">＋</button></div>
+        <div class="pack-row-cost">${totalCost>0?dh(totalCost):'—'}</div>
+        <button class="pack-remove" onclick="removePackRow(${i})">✕</button>
+      </div>
+      ${isCustom?`<div style="display:flex;gap:6px">
+        <input class="finput" style="flex:1;padding:4px 8px;font-size:11px" placeholder="Package name (e.g. Kraft bag)" value="${row.customName||''}" oninput="updatePackRow(${i},'customName',this.value)"/>
+        <input class="finput" type="number" min="0" style="width:80px;padding:4px 8px;font-size:11px" placeholder="Price DH" value="${row.customPrice||''}" oninput="updatePackRow(${i},'customPrice',this.value)"/>
+      </div>`:''}
+    </div>`;
+  }).join('');
 }
-function totalPackCost(){return packRows.reduce((s,r)=>s+(PACK_OPTS[r.type]||0)*r.qty,0);}
+function totalPackCost(){return packRows.reduce((s,r)=>s+getPackRowCost(r)*r.qty,0);}
 
 // ===== ADS =====
 function selectAds(val){
@@ -1530,7 +1548,10 @@ function renderOrders(){
     const pc=o.profit>0?'pp':o.profit<0?'pn':'pz';
     const fee=CITY_FEES[o.city]||o.shipping;
     const items=o.packagingItems||[];
-    const packHtml=items.length?items.map(r=>`<span class="pack-tag">${r.type}${r.qty>1?' ×'+r.qty:''}</span>`).join(''):'—';
+    const packHtml=items.length?items.map(r=>{
+      const label=r.type==='Custom'?(r.customName||'Custom'):r.type;
+      return `<span class="pack-tag">${label}${r.qty>1?' ×'+r.qty:''}</span>`;
+    }).join(''):'—';
     const qtyLabel=o.productQty>1?` ×${o.productQty}`:'';
     const retourTag=o.retourPenalty?`<span class="retour-tag">-${o.retourPenalty} DH</span>`:'';
     const profitDisplay=o.status==='returned'
@@ -1890,7 +1911,7 @@ try{
 
 // Polls the file every 3s, compares build hash meta tag
 // When a new file is dropped into the folder, the hash changes → shows update bar
-const BUILD_HASH = 'e5f07c63';
+const BUILD_HASH = 'f6a18d74';
 function checkForUpdate(){
   fetch(location.pathname + '?_=' + Date.now())
     .then(r => r.text())
