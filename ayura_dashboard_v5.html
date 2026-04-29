@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AYÜRA DASHBOARD</title>
-<meta name="ayura-build" content="d4e96b52">
+<meta name="ayura-build" content="e5f07c63">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -274,7 +274,7 @@ tbody td{padding:10px 11px;font-size:12px;vertical-align:middle;}
     <div><div class="htitle">AYÜRA DASHBOARD</div><div class="hsub">Operations · Morocco</div></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
-    <div class="ver-badge" title="Build hash: b9f14e23">v · 29/04 14:30</div>
+    <div class="ver-badge" title="Build hash: b9f14e23">v · 29/04 14:35</div>
     <div class="date-badge" id="liveClock">27/04/2026</div>
     <button onclick="exportBackup()" title="Download backup" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#6ee7b7;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">💾 Backup</button>
     <label title="Restore from backup" style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:#93c5fd;padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px">📂 Restore<input type="file" accept=".json" style="display:none" onchange="importBackup(event)"/></label>
@@ -1555,11 +1555,14 @@ function renderOrders(){
 
 // ===== KPIs =====
 function renderKPIs(){
-  const rev=orders.reduce((a,o)=>a+o.salePrice,0);
-  const cost=orders.reduce((a,o)=>a+(o.productCost||0),0);
-  const ship=orders.reduce((a,o)=>a+o.shipping,0);
-  const pack=orders.reduce((a,o)=>a+(o.packagingCost||0),0);
-  const profit=orders.reduce((a,o)=>a+o.profit,0);
+  const active=orders.filter(o=>o.status!=='returned');
+  const returned=orders.filter(o=>o.status==='returned');
+  const rev=active.reduce((a,o)=>a+o.salePrice,0); // returned = no revenue collected
+  const cost=active.reduce((a,o)=>a+(o.productCost||0),0);
+  const ship=active.reduce((a,o)=>a+o.shipping,0);
+  const pack=active.reduce((a,o)=>a+(o.packagingCost||0),0);
+  const retourLoss=returned.length*16;
+  const profit=active.reduce((a,o)=>a+o.profit,0)-retourLoss;
   const set=(id,val,cls)=>{const el=document.getElementById(id);if(el){el.textContent=val;el.className='kpi-val '+(cls||'neutral');}};
   set('kpiRev',dh(rev));set('kpiCost',dh(cost));set('kpiShip',dh(ship));set('kpiPack',dh(pack));
   set('kpiProfit',dh(profit),profit>0?'pos':profit<0?'neg':'neutral');
@@ -1570,11 +1573,13 @@ let cStatus=null,cProduct=null,cDaily=null;
 function renderWallet(){
   const range=getDateRange(walletFilter,walletCustomFrom,walletCustomTo);
   const data=orders.filter(o=>inRange(o.datetime,range.from,range.to));
-  const rev=data.reduce((a,o)=>a+o.salePrice,0);
-  const cost=data.reduce((a,o)=>a+(o.productCost||0),0);
-  const ship=data.reduce((a,o)=>a+o.shipping,0);
-  const pack=data.reduce((a,o)=>a+(o.packagingCost||0),0);
-  const profit=data.reduce((a,o)=>a+o.profit,0);
+  const active=data.filter(o=>o.status!=='returned');
+  const returned=data.filter(o=>o.status==='returned');
+  const rev=active.reduce((a,o)=>a+o.salePrice,0);
+  const cost=active.reduce((a,o)=>a+(o.productCost||0),0);
+  const ship=active.reduce((a,o)=>a+o.shipping,0);
+  const pack=active.reduce((a,o)=>a+(o.packagingCost||0),0);
+  const profit=active.reduce((a,o)=>a+o.profit,0)-(returned.length*16);
   const set=(id,val,cls)=>{const el=document.getElementById(id);if(el){el.textContent=val;el.className='kpi-val '+(cls||'neutral');}};
   set('wRev',dh(rev));set('wCost',dh(cost));set('wShip',dh(ship));set('wPack',dh(pack));
   set('wProfit',dh(profit),profit>0?'pos':profit<0?'neg':'neutral');
@@ -1885,7 +1890,7 @@ try{
 
 // Polls the file every 3s, compares build hash meta tag
 // When a new file is dropped into the folder, the hash changes → shows update bar
-const BUILD_HASH = 'd4e96b52';
+const BUILD_HASH = 'e5f07c63';
 function checkForUpdate(){
   fetch(location.pathname + '?_=' + Date.now())
     .then(r => r.text())
